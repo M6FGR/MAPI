@@ -1,0 +1,36 @@
+package M6FGR.mapi.mixins.mc;
+
+import M6FGR.mapi.events.mc.player.PlayerDispatchableEvents;
+import M6FGR.mapi.utils.code.CodeUtils;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.player.Player;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(value = Player.class, remap = false, priority = 1005)
+public abstract class PlayerMixin {
+
+    @Unique
+    private final Player mapi$Player = (Player) (Object) this;
+
+    @Inject(
+            method = "tick",
+            remap = false,
+            at = @At("HEAD")
+    )
+    private void injectTickDE(CallbackInfo ci) {
+        CodeUtils.construct(this.mapi$Player, PlayerDispatchableEvents.Tick::new);
+    }
+
+    @Inject(
+            method = "die",
+            remap = false,
+            at = @At("HEAD")
+    )
+    private void injectDeathDE(DamageSource cause, CallbackInfo ci) {
+        CodeUtils.construct(this.mapi$Player, cause, PlayerDispatchableEvents.Death::new);
+    }
+}
