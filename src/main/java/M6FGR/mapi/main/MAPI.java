@@ -1,15 +1,15 @@
 package M6FGR.mapi.main;
 
+import M6FGR.mapi.cls.logging.Logger;
+import M6FGR.mapi.cls.logging.LoggingManager;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public interface MAPI  {
     String MOD_ID = "mapi";
     String MOD_NAME = "M-API";
-    Logger LOGGER = LogManager.getLogger(MOD_NAME);
+    Logger LOGGER = LoggingManager.getLogger(MOD_NAME);
 
     static MAPI getInstance() {
         if (MAPIMod.instance == null) {
