@@ -25,14 +25,17 @@ public class MAPIMod implements MAPI {
         ILoadableClass.loadCls(modEventBus, MAPINetworkManager.class);
     }
 
+    @Override
     public Identifier identifier(String path) {
         return Identifier.fromNamespaceAndPath(MOD_ID, path);
     }
 
+    @Override
     public ModContainer getModContainer() {
         return this.mapiContainer;
     }
 
+    @Override
     public IEventBus getModBus() {
         return this.mapiBus;
     }
