@@ -1,22 +1,9 @@
 pluginManagement {
     repositories {
-        mavenLocal()
         gradlePluginPortal()
-        maven {
-            name = 'NeoForged Releases'
-            url = 'https://maven.neoforged.net/releases'
-        }
-        maven {
-            name = 'NeoForged Snapshots'
-            url = 'https://maven.neoforged.net/snapshots'
-        }
     }
 }
 
 plugins {
-    // Automatically downloads and manages Java JDK toolchains (e.g., JDK 21)
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
-
-// Ensures a consistent project name regardless of directory name
-rootProject.name = 'MAPI'
