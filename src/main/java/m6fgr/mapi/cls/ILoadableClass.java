@@ -1,15 +1,18 @@
 package m6fgr.mapi.cls;
 
 import m6fgr.mapi.cls.exceptions.ClassLoadingException;
+import m6fgr.mapi.cls.marks.Conditional;
 import m6fgr.mapi.main.MAPI;
-import m6fgr.mapi.utils.code.AccessType;
 import m6fgr.mapi.utils.code.CodeUtils;
+import m6fgr.mapi.utils.environment.EnvironmentHelper;
+import m6fgr.mapi.utils.environment.Environments;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.reflect.Constructor;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public interface ILoadableClass {
 
@@ -23,15 +26,35 @@ public interface ILoadableClass {
             return;
         }
 
+        Map<Class<?>, Object> allowedConstructorArgs = Map.of(
+                IEventBus.class, modBus,
+                Environments.class, EnvironmentHelper.getEnvironment()
+        );
+
         for (Class<? extends ILoadableClass> cls : classes) {
             if (LOADED_CLASSES.contains(cls)) {
                 throw new ClassLoadingException("Class [" + cls.getSimpleName() + "] is already loaded!");
-            } else if (!CodeUtils.isOverridingMethods(cls, ILoadableClass.class)) {
-                MAPI.LOGGER.warn("Class [{}] was loaded, but it doesn't override any methods!", cls.getSimpleName());
-                continue;
             }
 
             try {
+                Constructor<?>[] constructors = cls.getDeclaredConstructors();
+                if (constructors.length != 1) {
+                    throw new ClassLoadingException("Class [" + cls.getSimpleName() + "] must have exactly 1 constructor, found " + constructors.length);
+                }
+
+                Constructor<?> constructor = constructors[0];
+                constructor.setAccessible(true);
+
+                Class<?>[] parameterTypes = constructor.getParameterTypes();
+
+                boolean hasCustomConstructor = parameterTypes.length > 0;
+                boolean overridesMethods = CodeUtils.isOverridingMethods(cls, ILoadableClass.class);
+
+                if (!hasCustomConstructor && !overridesMethods) {
+                    MAPI.LOGGER.warn("Class [{}] was loaded, but it has a no-arg constructor and doesn't override any ILoadableClass methods!", cls.getSimpleName());
+                    continue;
+                }
+
                 SidedLoadableClass sidedLoadableClass = cls.getAnnotation(SidedLoadableClass.class);
                 Side targetSide = (sidedLoadableClass != null) ? sidedLoadableClass.value() : Side.BOTH;
 
@@ -40,12 +63,35 @@ public interface ILoadableClass {
                     continue;
                 }
 
-                ILoadableClass instance = CodeUtils.newInstance(cls, AccessType.DECLARED);
+                Object[] constructorArgs = new Object[parameterTypes.length];
+                Set<Class<?>> foundArgs = new HashSet<>();
+
+                for (int i = 0; i < parameterTypes.length; i++) {
+                    Class<?> paramType = parameterTypes[i];
+                    Object argInstance = allowedConstructorArgs.get(paramType);
+
+                    if (argInstance == null) {
+                        String allowed = allowedConstructorArgs.keySet().stream()
+                                .map(Class::getName)
+                                .collect(Collectors.joining(", "));
+                        throw new ClassLoadingException("Class [" + cls.getSimpleName() + "] constructor has unsupported argument: " + paramType.getName() + ". Allowed optional arguments: " + allowed);
+                    }
+
+                    if (foundArgs.contains(paramType)) {
+                        throw new ClassLoadingException("Duplicate constructor argument type [" + paramType.getSimpleName() + "] in class [" + cls.getSimpleName() + "]");
+                    }
+
+                    foundArgs.add(paramType);
+                    constructorArgs[i] = argInstance;
+                }
+
+                ILoadableClass instance = (ILoadableClass) constructor.newInstance(constructorArgs);
+
                 if (targetSide.shouldExecute()) {
                     instance.onModConstructor(modBus);
                     instance.onGameConstructor(NeoForge.EVENT_BUS);
 
-                    if (targetSide == Side.CLIENT) {
+                    if (targetSide.is(Side.CLIENT)) {
                         instance.onModClientConstructor(modBus);
                         instance.onGameClientConstructor(NeoForge.EVENT_BUS);
                     }
@@ -53,7 +99,7 @@ public interface ILoadableClass {
                 LOADED_CLASSES.add(cls);
                 MAPI.LOGGER.info("Loaded class [{}]", cls.getSimpleName());
             } catch (Exception e) {
-                MAPI.LOGGER.error("Failed to load class [{}], {}", cls.getSimpleName(), e);
+                MAPI.LOGGER.error("Failed to load class [{}]:", cls.getSimpleName(), e);
             }
         }
     }
@@ -62,7 +108,7 @@ public interface ILoadableClass {
 
     default void onGameConstructor(IEventBus gameBus) {}
 
-    // don't override if your class is not sided, only executes if the loading side was CLIENT
+    @Conditional("don't override if your class is not sided, only executes if the loading side was CLIENT as seen above")
     default void onModClientConstructor(IEventBus modBusC) {}
     default void onGameClientConstructor(IEventBus gameBusC) {}
 

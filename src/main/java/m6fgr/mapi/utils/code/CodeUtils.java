@@ -1,6 +1,6 @@
 package m6fgr.mapi.utils.code;
 
-import org.apache.logging.log4j.core.tools.picocli.CommandLine.InitializationException;
+import m6fgr.mapi.main.MAPI;
 import org.apache.logging.log4j.util.StackLocatorUtil;
 
 import java.lang.annotation.Annotation;
@@ -36,7 +36,6 @@ public class CodeUtils {
         }
     }
 
-
     public static <A, T> void forEach(
             T[] things,
             A thing,
@@ -50,20 +49,81 @@ public class CodeUtils {
     }
 
     public static <T> T newInstance(Class<T> instanceCls, AccessType accessType) {
+        return newInstance(instanceCls, accessType, (Object[]) null);
+    }
+
+    public static <T> T newInstance(Class<T> instanceCls, AccessType accessType, Object... constructorArgs) {
+        boolean hasArgs = constructorArgs != null && constructorArgs.length > 0;
+        Class<?>[] paramTypes = hasArgs
+                ? Arrays.stream(constructorArgs).map(Object::getClass).toArray(Class<?>[]::new)
+                : new Class<?>[0];
+
         try {
-            return switch (accessType) {
-                case PUBLIC -> instanceCls.getConstructor().newInstance();
-                case DECLARED -> {
-                    Constructor<T> constructor = instanceCls.getDeclaredConstructor();
-                    constructor.setAccessible(true);
-                    yield constructor.newInstance();
-                }
-            };
+            Constructor<T> constructor = findMatchingConstructor(instanceCls, accessType, paramTypes);
+            constructor.setAccessible(true);
+            return hasArgs ? constructor.newInstance(constructorArgs) : constructor.newInstance();
+
         } catch (NoSuchMethodException noCons) {
-            throw new IllegalArgumentException("No default constructor found for " + instanceCls.getSimpleName(), noCons);
+            // Fallback: If parametric constructor failed, attempt default zero-arg constructor
+            if (hasArgs) {
+                try {
+                    Constructor<T> defaultCons = (accessType == AccessType.PUBLIC)
+                            ? instanceCls.getConstructor()
+                            : instanceCls.getDeclaredConstructor();
+
+                    defaultCons.setAccessible(true);
+                    return defaultCons.newInstance();
+                } catch (Exception ignored) {
+                    // Ignore fallback failure to throw descriptive exception below
+                }
+            }
+            throw new IllegalArgumentException("No matching constructor found for " + instanceCls.getSimpleName(), noCons);
         } catch (Exception e) {
-            throw new InitializationException("Failed to instantiate " + instanceCls.getSimpleName(), e);
+            throw new RuntimeException("Failed to instantiate " + instanceCls.getSimpleName(), e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> Constructor<T> findMatchingConstructor(Class<T> instanceCls, AccessType accessType, Class<?>[] paramTypes) throws NoSuchMethodException {
+        // 1. First Pass: Search using the requested AccessType
+        Constructor<?>[] constructors = (accessType == AccessType.PUBLIC)
+                ? instanceCls.getConstructors()
+                : instanceCls.getDeclaredConstructors();
+
+        for (Constructor<?> c : constructors) {
+            Class<?>[] cParams = c.getParameterTypes();
+            if (cParams.length == paramTypes.length && isParamMatch(cParams, paramTypes)) {
+                return (Constructor<T>) c;
+            }
+        }
+
+        // 2. Second Pass: If PUBLIC was requested but failed, check DECLARED constructors as fallback
+        if (accessType == AccessType.PUBLIC) {
+            for (Constructor<?> c : instanceCls.getDeclaredConstructors()) {
+                Class<?>[] cParams = c.getParameterTypes();
+                if (cParams.length == paramTypes.length && isParamMatch(cParams, paramTypes)) {
+                    return (Constructor<T>) c;
+                }
+            }
+        }
+
+        // 3. Third Pass: Fallback direct lookup for exact matches
+        return (accessType == AccessType.PUBLIC)
+                ? instanceCls.getConstructor(paramTypes)
+                : instanceCls.getDeclaredConstructor(paramTypes);
+    }
+
+    private static boolean isParamMatch(Class<?>[] constructorParams, Class<?>[] passedArgs) {
+        for (int i = 0; i < constructorParams.length; i++) {
+            if (!constructorParams[i].isAssignableFrom(passedArgs[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static <T> T newInstance(Class<T> instanceCls, Object... constructorArgs) {
+        return newInstance(instanceCls, AccessType.PUBLIC, constructorArgs);
     }
 
     public static boolean hasAnnotationSuper(Class<?> cls, Class<? extends Annotation> annotationCls) {
@@ -104,7 +164,7 @@ public class CodeUtils {
     }
 
     public static Method[] getMethods(Class<?> cls) {
-       return CodeUtils.getMethods(cls, AccessType.PUBLIC);
+        return CodeUtils.getMethods(cls, AccessType.PUBLIC);
     }
 
     public static Field[] getFields(Class<?> cls, AccessType access) {
@@ -129,7 +189,7 @@ public class CodeUtils {
         }
 
         Method[] methods = getMethods(cls, AccessType.DECLARED);
-        Method[] superMethods = getMethods(superCls, AccessType.DECLARED);
+        Method[] superMethods = superCls.isInterface() ? superCls.getMethods() : getMethods(superCls, AccessType.DECLARED);
 
         if (methods == null || superMethods == null) {
             return false;
@@ -156,7 +216,7 @@ public class CodeUtils {
 
     public static boolean isOverridableInSuper(Method m) {
         int modifiers = m.getModifiers();
-        return !CodeUtils.isNotAccessible(m)
+        return !Modifier.isPrivate(modifiers)
                 && !Modifier.isStatic(modifiers)
                 && !Modifier.isFinal(modifiers);
     }

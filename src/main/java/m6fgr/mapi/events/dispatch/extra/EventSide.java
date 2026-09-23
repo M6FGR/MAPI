@@ -8,16 +8,16 @@ import java.util.function.Predicate;
 public enum EventSide {
     CLIENT(Dist::isClient),
     SERVER(Dist::isDedicatedServer),
-    COMMON(dist -> true);
+    BOTH(dist -> dist.isClient() || dist.isDedicatedServer());
 
-    private final Predicate<Dist> disPredict;
+    private final Predicate<Dist> distPredicate;
 
     EventSide(Predicate<Dist> distPredict) {
-        this.disPredict = distPredict;
+        this.distPredicate = distPredict;
     }
 
 
     public boolean canDispatch() {
-        return this.disPredict.test(FMLLoader.getDist());
+        return this.distPredicate.test(FMLLoader.getDist());
     }
 }

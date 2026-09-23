@@ -21,11 +21,11 @@ public enum Environments {
     }
 
     Environments(@Nullable Environments parent) {
-        this(EnvironmentHelper::isDev, parent);
+        this(EnvironmentHelper::isDevelopmentEnvironment, parent);
     }
 
     Environments() {
-        this(EnvironmentHelper::isDev, null);
+        this(EnvironmentHelper::isDevelopmentEnvironment, null);
     }
 
     public boolean isDevEnv() {

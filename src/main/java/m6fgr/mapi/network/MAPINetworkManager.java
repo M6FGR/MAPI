@@ -1,8 +1,13 @@
 package m6fgr.mapi.network;
 
+import com.mojang.realmsclient.client.RealmsClient.Environment;
 import m6fgr.mapi.cls.ILoadableClass;
+import m6fgr.mapi.main.MAPI;
+import m6fgr.mapi.network.packets.client.CPEntityInteraction;
 import m6fgr.mapi.network.packets.server.SPGameRuleSync;
 import m6fgr.mapi.utils.code.CodeUtils;
+import m6fgr.mapi.utils.environment.Environments;
+import net.minecraft.Util;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -15,14 +20,18 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
+import java.util.Objects;
 
-public final class MAPINetworkManager implements ILoadableClass {
+
+public class MAPINetworkManager implements ILoadableClass {
 
     private static PayloadRegistrar registrar;
 
+
     private static void registerChannel(RegisterPayloadHandlersEvent event) {
-        registrar = event.registrar("1");
+        registrar = event.registrar(MAPI.MOD_ID).versioned("1");
         registerPacket(SPGameRuleSync.TYPE, SPGameRuleSync.CODEC, SPGameRuleSync::handle, PayLoadType.SERVER);
+        registerPacket(CPEntityInteraction.TYPE, CPEntityInteraction.CODEC, CPEntityInteraction::handle, PayLoadType.CLIENT);
     }
 
 
@@ -39,12 +48,18 @@ public final class MAPINetworkManager implements ILoadableClass {
     }
 
     public static void sendToAllTrackingThisEntity(Entity entity, CustomPacketPayload... payloads) {
-        if (payloads == null || payloads.length == 0) return;
+        if (payloads == null || payloads.length == 0) {
+            MAPI.LOGGER.warn("No valid packets in sendToAllTrackingThisEntity()!");
+            return;
+        }
         CodeUtils.forEach(payloads, entity, PacketDistributor::sendToPlayersTrackingEntity);
     }
 
     public static void sendToAllTrackingThisEntityAndSelf(Entity entity, CustomPacketPayload... payloads) {
-        if (payloads == null || payloads.length == 0) return;
+        if (payloads == null || payloads.length == 0) {
+            MAPI.LOGGER.warn("No valid packets in sendToAllTrackingThisEntityAndSelf()!");
+            return;
+        }
         CodeUtils.forEach(payloads, entity, PacketDistributor::sendToPlayersTrackingEntityAndSelf);
     }
 

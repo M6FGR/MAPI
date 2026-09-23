@@ -9,14 +9,14 @@ import net.neoforged.fml.ModContainer;
 
 import java.util.function.Consumer;
 
-public interface MAPI  {
+public sealed interface MAPI permits MAPIMod {
     String MOD_ID = "mapi";
     String MOD_NAME = "M-API";
     Logger LOGGER = LoggingManager.getLogger(MOD_NAME);
 
     static MAPI getInstance() {
         if (MAPIMod.instance == null) {
-            throw new NullPointerException("Called the instance too early!");
+            throw new NullPointerException("Called MAPI instance too early!");
         }
         return MAPIMod.instance;
     }

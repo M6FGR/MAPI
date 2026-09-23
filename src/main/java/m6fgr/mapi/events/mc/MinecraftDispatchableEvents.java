@@ -4,6 +4,7 @@ import m6fgr.mapi.events.dispatch.dispatchers.EventDispatcher;
 import m6fgr.mapi.events.dispatch.extra.EventSide;
 import m6fgr.mapi.events.mc.client.ClientDispatchableEvents;
 import m6fgr.mapi.events.mc.player.PlayerDispatchableEvents;
+import m6fgr.mapi.events.mc.server.PingUpdateDispatchableEvent;
 import m6fgr.mapi.events.mc.server.ServerDispatchableEvents;
 
 public final class MinecraftDispatchableEvents {
@@ -27,7 +28,10 @@ public final class MinecraftDispatchableEvents {
     public static final EventDispatcher<PlayerDispatchableEvents.JoinClient> PLAYER_JOIN_CLIENT = EventDispatcher.createDispatch(PlayerDispatchableEvents.JoinClient.class, EventSide.CLIENT);
     public static final EventDispatcher<PlayerDispatchableEvents.ItemUse> PLAYER_ITEM_USE = EventDispatcher.createDispatch(PlayerDispatchableEvents.ItemUse.class, EventSide.CLIENT);
 
-    private MinecraftDispatchableEvents() {}
+    // Off-Context Events
+    public static final EventDispatcher<PingUpdateDispatchableEvent> PING_UPDATE = EventDispatcher.createDispatch(PingUpdateDispatchableEvent.class, EventSide.SERVER);
 
+
+    private MinecraftDispatchableEvents() {}
 
 }

@@ -4,15 +4,23 @@ import m6fgr.mapi.events.dispatch.DispatchableEvent;
 import m6fgr.mapi.events.dispatch.dispatchers.marks.ClientEvent;
 import m6fgr.mapi.events.dispatch.extra.IDispatchableEvent;
 import m6fgr.mapi.events.mc.MinecraftDispatchableEvents;
+import net.minecraft.network.protocol.common.ServerCommonPacketListener;
+import net.minecraft.network.protocol.game.ServerGamePacketListener;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
+import net.minecraft.server.players.PlayerList;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-@ClientEvent
 public abstract class ServerDispatchableEvents extends DispatchableEvent implements IDispatchableEvent {
 
     private final MinecraftServer server;
 
     public ServerDispatchableEvents(MinecraftServer server) {
         this.server = server;
+    }
+
+    public ServerDispatchableEvents() {
+        this(ServerLifecycleHooks.getCurrentServer());
     }
 
     public MinecraftServer getServer() {
@@ -61,6 +69,7 @@ public abstract class ServerDispatchableEvents extends DispatchableEvent impleme
 
         public Tick(MinecraftServer server) {
             super(server);
+
         }
 
         @Override

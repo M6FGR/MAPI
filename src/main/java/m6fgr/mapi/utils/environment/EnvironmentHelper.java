@@ -25,13 +25,13 @@ public class EnvironmentHelper {
 
     public static Minecraft getClient() {
         if (!DIST.isClient()) {
-            throw new IllegalCallerException("Called getClient() on a server environment!");
+            throw new IllegalCallerException("Called getClient() on a non-client environment!");
         }
         return Minecraft.getInstance();
     }
 
     static boolean isOfficialMC() {
-        if (!EnvironmentHelper.DIST.isClient()) return false;
+        if (!DIST.isClient()) return false;
         User user = EnvironmentHelper.getClient().getUser();
         return !user.getAccessToken().equals("0") && !user.getAccessToken().equals("NotValid");
     }
@@ -41,12 +41,12 @@ public class EnvironmentHelper {
         return IS_DEVELOPER && isOfficialMC();
     }
 
-    public static boolean isDev() {
+    public static boolean isDevelopmentEnvironment() {
         return IS_DEVELOPER;
     }
 
     static boolean isServerAuthenticated() {
-        if (EnvironmentHelper.DIST.isClient()) return false;
+        if (DIST.isClient()) return false;
         MinecraftServer currentServer = getCurrentServer();
         return currentServer != null && currentServer.usesAuthentication();
     }
@@ -66,7 +66,7 @@ public class EnvironmentHelper {
 
     public static Environments getEnvironment() {
         MinecraftServer server = EnvironmentHelper.getCurrentServer();
-        if (EnvironmentHelper.DIST.isDedicatedServer()) {
+        if (DIST.isDedicatedServer()) {
             if (server != null) {
                 if (server instanceof GameTestServer) {
                     return Environments.GAME_TEST_SERVER;
@@ -77,7 +77,7 @@ public class EnvironmentHelper {
             return Environments.DEDICATED_SERVER;
         }
 
-        if (EnvironmentHelper.DIST.isClient()) {
+        if (DIST.isClient()) {
             if (server != null) {
                 if (server instanceof IntegratedServer) {
                     return Environments.LAN_SERVER;

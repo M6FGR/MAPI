@@ -2,11 +2,13 @@ package m6fgr.mapi.events.mc.client;
 
 import m6fgr.mapi.events.dispatch.DispatchableEvent;
 import m6fgr.mapi.events.dispatch.dispatchers.marks.ClientEvent;
+import m6fgr.mapi.events.dispatch.dispatchers.marks.HybridEvent;
 import m6fgr.mapi.events.dispatch.extra.IDispatchableEvent;
 import m6fgr.mapi.events.mc.MinecraftDispatchableEvents;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 
-@ClientEvent
+@ClientEvent @HybridEvent
 public abstract class ClientDispatchableEvents extends DispatchableEvent implements IDispatchableEvent {
 
     protected final Minecraft mc;

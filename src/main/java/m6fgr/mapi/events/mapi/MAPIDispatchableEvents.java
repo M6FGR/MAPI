@@ -1,6 +1,7 @@
 package m6fgr.mapi.events.mapi;
 
 import m6fgr.mapi.events.dispatch.dispatchers.EventDispatcher;
+import m6fgr.mapi.events.dispatch.extra.EventSide;
 import m6fgr.mapi.events.mapi.registries.GameRulesRegistryDispatchableEvent;
 
 public final class MAPIDispatchableEvents {

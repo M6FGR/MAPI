@@ -35,7 +35,9 @@ neoForge {
     runs {
         client {
             client()
-
+            dependencies {
+                runtimeOnly files("run/client_mods/better_ping_display.jar")
+            }
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }

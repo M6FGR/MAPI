@@ -1,6 +1,9 @@
 package m6fgr.mapi.events.dispatch.dispatchers;
 
 import m6fgr.mapi.cls.exceptions.IllegalSideException;
+import m6fgr.mapi.cls.numbers.AbstractSequence;
+import m6fgr.mapi.cls.numbers.AbstractSequence.ByteSequence;
+import m6fgr.mapi.cls.numbers.AbstractSequence.IntegerSequence;
 import m6fgr.mapi.events.dispatch.DispatchableEvent;
 import m6fgr.mapi.events.dispatch.dispatchers.entries.ListenerEntry;
 import m6fgr.mapi.events.dispatch.dispatchers.marks.ClientEvent;
@@ -16,7 +19,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class EventDispatcher<T extends DispatchableEvent> {
@@ -24,7 +26,7 @@ public class EventDispatcher<T extends DispatchableEvent> {
     protected final EventSide side;
     protected final Class<T> eventType;
     protected final List<ListenerEntry<T>> listeners = new CopyOnWriteArrayList<>();
-    private final AtomicInteger sequenceGenerator = new AtomicInteger();
+    private final AbstractSequence.IntegerSequence integerSequence = IntegerSequence.empty();
 
     protected EventDispatcher(Class<T> eventType, EventSide side) {
         this.eventType = eventType;
@@ -32,7 +34,7 @@ public class EventDispatcher<T extends DispatchableEvent> {
     }
 
     protected EventDispatcher(Class<T> eventType) {
-        this(eventType, EventSide.COMMON);
+        this(eventType, EventSide.BOTH);
     }
 
     public static <T extends DispatchableEvent> EventDispatcher<T> createDispatch(Class<T> eventType) {
@@ -69,7 +71,7 @@ public class EventDispatcher<T extends DispatchableEvent> {
         if (priority == EventPriority.OVERRIDE) {
             this.listeners.removeIf(entry -> entry.priority() != priority);
         }
-        int sequence = this.sequenceGenerator.incrementAndGet();
+        int sequence = this.integerSequence.incrementAndGet();
         this.addListener(new ListenerEntry<>(listener, priority, sequence));
 
         this.listeners.sort(
@@ -107,12 +109,12 @@ public class EventDispatcher<T extends DispatchableEvent> {
 
         Class<?> eventClass = dispatchableEvent.getClass();
 
-        boolean clientOnly = CodeUtils.hasAnnotationSuper(eventClass, ClientEvent.class);
+        boolean clientOnly = CodeUtils.hasAnnotationSuper(eventClass, ClientEvent.class) && eventClass.getSuperclass() != DispatchableEvent.class;
         if (clientOnly && this.side != EventSide.CLIENT) {
             throw new IllegalSideException("Tried to post client-only event [" + this.getFormattedClassName(this.eventType) + "] for side: " + this.side);
         }
 
-        boolean isHybrid = CodeUtils.hasAnnotationSuper(eventClass, HybridEvent.class);
+        boolean isHybrid = CodeUtils.hasAnnotationSuper(eventClass, HybridEvent.class) && eventClass.getSuperclass() != DispatchableEvent.class;
         if (isHybrid) {
             HybridEvent hybridEvent = eventClass.getAnnotation(HybridEvent.class);
             if (hybridEvent != null) {
@@ -134,7 +136,7 @@ public class EventDispatcher<T extends DispatchableEvent> {
         return dispatchableEvent;
     }
 
-    private static <T extends DispatchableEvent> void postToAllBusses(T dispatchableEvent) {
+    public static <T extends DispatchableEvent> void postToAllBusses(T dispatchableEvent) {
         ModLoader.postEvent(dispatchableEvent);
         NeoForge.EVENT_BUS.post(dispatchableEvent);
     }

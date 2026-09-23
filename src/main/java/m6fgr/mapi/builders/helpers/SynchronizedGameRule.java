@@ -13,9 +13,10 @@ import net.minecraft.world.level.Level;
 
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class SynchronizedGameRule<T,V extends Value<V>> {
+public class SynchronizedGameRule<T, V extends Value<V>> {
 
     private final String name;
     private final GameRules.Category category;
